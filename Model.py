@@ -119,6 +119,7 @@ class StyleClassifier(nn.Module):
         super(StyleClassifier, self).__init__()
         """ Roberta and BART are using the same tokenizer """
         print("Loading BERT model for style classification:", global_config.corpus_mode)
+        self.style_classifier = RobertaForSequenceClassification.from_pretrained(global_config.pretrained_style_model, output_attentions=True)
         self.style_classifier_tokenizer = BartTokenizer.from_pretrained(global_config.pretrained_tokenizer, use_fast=True)
         self.style_classifier.cuda().eval()
         self.style_classifier.load_state_dict(torch.load('saved_models/TextBERT_' + global_config.corpus_mode + '/TextBERT_best.chkpt'))
@@ -160,21 +161,12 @@ class Model:
         self.style_class_dict = {"informal": 0, "formal": 1, "negative": 0, "positive": 1}
 
         if global_config.corpus_mode in ["amazon", "Yelp"]:
-            self.optimizer_Supervised = torch.optim.RMSprop(params=self.agent.parameters(), lr=0.00002)
-            self.optimizer_RL = torch.optim.RMSprop(params=self.agent.parameters(), lr=0.00002)
+            self.optimizer_Supervised = torch.optim.RMSprop(params=self.agent.parameters(), lr=0.00001)
+            self.optimizer_RL = torch.optim.RMSprop(params=self.agent.parameters(), lr=0.00001)
 
         elif global_config.corpus_mode == "GYAFC":
-            self.optimizer_Supervised = torch.optim.AdamW(params=self.agent.parameters(), lr=0.00002)
-            self.optimizer_RL = torch.optim.AdamW(params=self.agent.parameters(), lr=0.00002)
-
-        if global_config.freeze_some_LM_layer:
-            for name, param in self.agent.language_backbone.named_parameters():
-                layer_num = re.findall("layer\.(\d+)\.", name)
-                if len(layer_num) > 0 and int(layer_num[0]) > 4:
-                    print("Unfreeze layer:", int(layer_num[0]))
-                    param.requires_grad = True
-                else:
-                    param.requires_grad = False
+            self.optimizer_Supervised = torch.optim.AdamW(params=self.agent.parameters(), lr=0.00001)
+            self.optimizer_RL = torch.optim.AdamW(params=self.agent.parameters(), lr=0.00001)
 
     def infer_mask(self, generated_id_tensor):
         tmp = generated_id_tensor.detach().cpu().numpy().tolist()
@@ -210,7 +202,7 @@ class Model:
                     if tmp_count_dict[j] > global_config.batch_size:
                         self.diversity_dict[j] = 100
 
-                print("############", self.iter_step, self.agent.tokenizer.decode(self.diversity_dict.keys()), "############")
+                # print("############", self.iter_step, self.agent.tokenizer.decode(self.diversity_dict.keys()), "############")
 
         tmp_mask_no_special_token = [[1 if k in [0, 1, 2, mask_idx[i], ] else 0 for k, v in enumerate(j)] for i, j in enumerate(tmp)]
         tmp_mask_diversity_mask = [[0.5 if v in self.diversity_dict.keys() and k not in [0, 1, 2, mask_idx[i], ] else 1.0 for k, v in enumerate(j)] for i, j in enumerate(tmp)]

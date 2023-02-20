@@ -17,10 +17,8 @@ pseudo_method = "lexical"
 sentence_seg_token = " </s> <s> "
 # sentence_seg_token = " [SEP] [CLS] "
 
-freeze_some_LM_layer = False
-
 using_label_smoothing = True
-smooth_epsilon = 0.1
+smooth_epsilon = 0.15
 
 start_from_epoch = 0
 supervised_epoch_num = 2
@@ -36,7 +34,7 @@ load_model_path = "./saved_models/xxxx.pth"
 batch_loss_print_interval = 20
 print_all_predictions = True
 
-batch_size = 32
+batch_size = 64
 num_epochs = 10
 
 if corpus_mode in ["Yelp", "amazon"]:

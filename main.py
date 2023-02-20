@@ -31,7 +31,7 @@ def setup_seed(seed):
 
 def process_lines(text_lines, class_type, prefix_A, prefix_B):
     tmp_lines = [re.sub("\s+", " ", i.replace("\t", " ")).strip()[:200] for i in text_lines if len(i) > 5]
-    tmp_lines = ["<s>" + prefix_A + "# " + i + "</s>" if class_type == 1 else "<s>" + prefix_B + "# " + i + "</s>" for i in tmp_lines]
+    tmp_lines = ["<s>" + prefix_A + " # " + i + "</s>" if class_type == 1 else "<s>" + prefix_B + " # " + i + "</s>" for i in tmp_lines]
     return tmp_lines
 
 
@@ -41,8 +41,8 @@ if global_config.corpus_mode == "Yelp":
     """ Reading Yelp data, and add the unsupervised pairs """
     print("Reading Yelp data with pseudo parallel data")
     train_sample, test_sample = [], []
-    list_a = open("./pseudo_paired_data_Yelp/" + global_config.pseudo_method + "/merged_0_A_0_", "r", encoding="utf-8").readlines()
-    list_b = open("./pseudo_paired_data_Yelp/" + global_config.pseudo_method + "/merged_0_B_1_", "r", encoding="utf-8").readlines()
+    list_a = open("./pseudo_paired_data_Yelp/" + global_config.pseudo_method + "_based/merged_0_A_0", "r", encoding="utf-8").readlines()
+    list_b = open("./pseudo_paired_data_Yelp/" + global_config.pseudo_method + "_based/merged_0_B_1", "r", encoding="utf-8").readlines()
 
     assert len(list_a) == len(list_b)
 
@@ -51,7 +51,8 @@ if global_config.corpus_mode == "Yelp":
         tmp_b = [j for j in list_b[i].split() if len(j) > 1]
 
         if len(set(tmp_a) & set(tmp_b)) > 1:
-            train_sample.append((process_lines([list_a[i], ], class_type=0)[0], process_lines([list_b[i], ], class_type=1)[0]))
+            train_sample.append((process_lines([list_a[i], ], class_type=0, prefix_A="positive", prefix_B="negative")[0],
+                                 process_lines([list_b[i], ], class_type=1, prefix_A="positive", prefix_B="negative")[0]))
 
     test_data_files = {"./pseudo_paired_data_Yelp/reference_0_0": "./pseudo_paired_data_Yelp/reference_0_1",
                        "./pseudo_paired_data_Yelp/reference_1_1": "./pseudo_paired_data_Yelp/reference_1_0"}
@@ -62,7 +63,9 @@ if global_config.corpus_mode == "Yelp":
                 process_lines(open(test_data_files[i], encoding="utf-8").readlines(), class_type=int(test_data_files[i][-1]),
                               prefix_A="positive", prefix_B="negative")))
 
-    train_sample = [(i[1], i[0]) for i in train_sample] + train_sample
+    # train_sample = [(i[1], i[0]) for i in train_sample] + train_sample
+    tmp_sample_size = 20000
+    train_sample = [(i[1], i[0]) for i in train_sample[:tmp_sample_size]] + train_sample[tmp_sample_size:tmp_sample_size * 2]
     test_sample = [(i[0], i[1]) for i in test_sample]
 
     """ adding multiple human references """
@@ -88,8 +91,8 @@ elif global_config.corpus_mode == "amazon":
     train_sample, test_sample = [], []
 
     """ reading amazon training sample version 2.0: add post processing """
-    list_a = open("amazon_data_paired/merged_0_A_0_" + global_config.pseudo_method, encoding="utf-8").readlines()
-    list_b = open("amazon_data_paired/merged_0_B_1_" + global_config.pseudo_method, encoding="utf-8").readlines()
+    list_a = open("./pseudo_paired_data_Amazon/" + global_config.pseudo_method + "_based/merged_0_A_0", "r", encoding="utf-8").readlines()
+    list_b = open("./pseudo_paired_data_Amazon/" + global_config.pseudo_method + "_based/merged_0_B_1", "r", encoding="utf-8").readlines()
 
     assert len(list_a) == len(list_b)
 
@@ -178,9 +181,6 @@ def train_process(model, train_data):
             model.supervised_loss_decay = 0.6 ** (train_epoch + 1)
             print("Supervised loss decay: " + str(model.supervised_loss_decay))
 
-        model.teacher_forcing_rate = global_config.MLE_teacher_forcing_anneal_rate ** train_epoch
-        print("model.teacher_forcing_rate,", model.teacher_forcing_rate)
-
         for batch in train_batches:
             supervised_loss, cyclic_loss, GAN_dis_loss, GAN_gen_loss, transferred_sen_text, _ = model.batch_train(batch, train_epoch)
             summary_steps += 1
@@ -258,7 +258,7 @@ def evaluate_process(model, data_test_collection, train_epoch, best_score=None, 
         bleu_score = corpus_bleu(list_of_references=all_gold_sentences, hypotheses=all_transferred_sentences)
         all_eval_score += bleu_score
 
-        [print(data_test_collection[tmp_i][-i], "\n", " ".join(all_transferred_sentences[-i])) for i in range(20)]
+        # [print(data_test_collection[tmp_i][-i], "\n", " ".join(all_transferred_sentences[-i])) for i in range(20)]
         # [print(all_gold_sentences[i], "\n", all_transferred_sentences[i], "\n\n") for i in range(10)]
 
         if any(all_test_loss):
