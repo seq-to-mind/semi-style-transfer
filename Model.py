@@ -259,10 +259,12 @@ class Model:
             """ Back Translation Training """
             """ here the reward should have the dim (batch_size, ) """
             with torch.no_grad():
-                # cyclic_advantage = self.agent.cyclic_generation(batch_target_style_list, trans_sen_text_sampling, batch_sample_input_text) - \
-                #                    self.agent.cyclic_generation(batch_target_style_list, trans_sen_text_greedy, batch_sample_input_text)
-
-                cyclic_advantage = self.agent.cyclic_generation(batch_target_style_list, trans_sen_text_sampling, batch_sample_input_text)
+                # calculate self-critical advantage
+                cyclic_advantage = self.agent.cyclic_generation(batch_target_style_list, trans_sen_text_sampling, batch_sample_input_text) - \
+                                   self.agent.cyclic_generation(batch_target_style_list, trans_sen_text_greedy, batch_sample_input_text)
+                cyclic_advantage = torch.clamp(cyclic_advantage, min=0.0) # optional: add the clamp operation when advantage < 0
+                
+                # cyclic_advantage = self.agent.cyclic_generation(batch_target_style_list, trans_sen_text_sampling, batch_sample_input_text)
 
             """ Style Discriminator Training """
             if trans_sen_text_greedy is not None:
