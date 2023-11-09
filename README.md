@@ -1,5 +1,5 @@
 ## Introduction
-* One implementation of the paper __Learning from Bootstrapping and Stepwise Reinforcement Reward: A Semi-Supervised Framework for Text Style Transfer__.
+* One implementation of the paper __Learning from Bootstrapping and Stepwise Reinforcement Reward: A Semi-Supervised Framework for Text Style Transfer__ in NAACL 2022.
 * This code and data are only for research use. Please cite the papers if they are helpful. <br>
 
 
